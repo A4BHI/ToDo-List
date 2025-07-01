@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css?v=3" />
+    <!-- <title>Document</title> -->
+  </head>
+  <body>
+    <div class="main">
+      <div class="head">
+        <header>ToDo-List</header>
+      </div>
+      <div class="input">
+        <input type="text" required placeholder="add task" id="task" />
+        <button class="btn1" onclick="add()">Add</button>
+      </div>
+      <div class="content">
+        <div style="height: 10px"></div>
+      </div>
+    </div>
+    <script>
+      let splitted = [];
+      let array = [];
+      let clearmsg1 = " ";
+      let fullycleared = " ";
+      window.addEventListener("load", async (event) => {
+        try {
+          let response = await fetch("/reload", {
+            method: "GET",
+          });
+          let data = await response.text();
+          //console.log(data);
+          <!-- clearmsg1 = data.replace("[", "").replace("]", ""); -->
+
+          array = await data.split("|");
+          if (array.length > 0 && array[0] != "") {
+            for (let i = 0; i < array.length; i++) {
+              splitted = array[i].split("+");
+              if (splitted[0] != "") {
+                addAfterReload(splitted[0], splitted[1]);
+              }
+            }
+          }
+
+          // array = fullycleared.split("|");
+          console.log(array);
+          //console.log(array.length);
+        } catch (error) {
+          console.log(error);
+        }
+      });
+
+      function addAfterReload(t, done) {
+        let contentdiv = document.getElementsByClassName("content");
+        let maindiv = document.createElement("div");
+        maindiv.className = "taskmsg";
+
+        let msg = document.createElement("p");
+        msg.innerHTML = t;
+        if (done == "true") {
+          maindiv.classList.add("completed");
+        }
+
+        let finishbtn = document.createElement("button");
+        finishbtn.className = "finish";
+        finishbtn.innerHTML = "✔️";
+
+        let delbtn = document.createElement("button");
+        delbtn.className = "delete";
+        delbtn.innerHTML = "🗑️";
+
+        maindiv.appendChild(msg);
+        maindiv.appendChild(finishbtn);
+        maindiv.appendChild(delbtn);
+
+        document.querySelector(".content").prepend(maindiv);
+        document.querySelector("#task").value = "";
+      }
+
+      async function add() {
+        let message = document.getElementById("task").value.trim();
+        console.log(message);
+        let m = "";
+        if (message != "") {
+          try {
+            let response = await fetch("/add", {
+              method: "POST",
+              headers: {
+                "content-type": "application/x-www-form-urlencoded",
+              },
+              body: `task=${encodeURIComponent(message)}`,
+            });
+            let data = await response.text();
+            m = data;
+            console.log(data);
+          } catch (error) {
+            console.log(error);
+          }
+
+          let contentdiv = document.getElementsByClassName("content");
+          let maindiv = document.createElement("div");
+          maindiv.className = "taskmsg";
+
+          let msg = document.createElement("p");
+          msg.innerHTML = m;
+
+          let finishbtn = document.createElement("button");
+          finishbtn.className = "finish";
+          finishbtn.innerHTML = "✔️";
+
+          let delbtn = document.createElement("button");
+          delbtn.className = "delete";
+          delbtn.innerHTML = "🗑️";
+
+          maindiv.appendChild(msg);
+          maindiv.appendChild(finishbtn);
+          maindiv.appendChild(delbtn);
+
+          document.querySelector(".content").prepend(maindiv);
+          document.querySelector("#task").value = "";
+        }
+      }
+
+      let inputtag = document.getElementById("task");
+      inputtag.addEventListener("keypress", function (e) {
+        if (e.key == "Enter") {
+          let val = document.getElementById("task").value.trim();
+          if (val != "") {
+            add();
+          }
+        }
+      });
+
+      document.querySelector(".content").addEventListener("click", (e) => {
+        if (e.target.classList.contains("finish")) {
+          let parent = e.target.closest(".taskmsg");
+          let ptag = parent.querySelector("p");
+          let task = ptag.innerText;
+          finishTask(task, ptag, parent);
+        }
+      });
+
+      async function finishTask(task, t, parent) {
+        console.log(task);
+        try {
+          let response = await fetch("/finish", {
+            method: "POST",
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: task,
+          });
+          let data = await response.text();
+          console.log(data);
+          if (data == "finish") {
+            console.log(data);
+            //t.style.textDecoration = "line-through";
+            parent.classList.add("completed");
+          } else if (data == "reload") {
+            location.reload();
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+      document.querySelector(".content").addEventListener("click", (e) => {
+        if (e.target.classList.contains("delete")) {
+          let parent = e.target.closest(".taskmsg");
+          let ptag = parent.querySelector("p");
+          let task = ptag.innerText;
+          deleteTask(task, parent);
+        }
+      });
+      async function deleteTask(task, tag) {
+        try {
+          let response = await fetch("/delete", {
+            method: "POST",
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: task,
+          });
+
+          if (response.status == 200) {
+            tag.remove();
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    </script>
+  </body>
+</html>
